@@ -1,5 +1,5 @@
 import streamlit as st
-from pypdf import PdfReader  # UPDATED: Using the modern library
+from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
@@ -8,6 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 import os
+import time  # NEW: Needed for the "sleep" pause
 
 st.set_page_config(page_title="chat-with-pdf", page_icon="logo.png", layout="wide")
 
@@ -21,46 +22,72 @@ except FileNotFoundError:
 def get_pdf_text(pdf_docs):
     text = ""
     total_pages = 0
-    # Create a progress bar
-    progress_bar = st.progress(0)
+    progress_bar = st.progress(0, text="Reading PDF...")
     
-    for pdf in pdf_docs:
+    for file_index, pdf in enumerate(pdf_docs):
         pdf_reader = PdfReader(pdf)
         num_pages = len(pdf_reader.pages)
         total_pages += num_pages
         
-        # Iterate through pages with a progress update
         for i, page in enumerate(pdf_reader.pages):
             try:
                 page_text = page.extract_text()
-                if page_text: # Only add if text was found
+                if page_text:
                     text += page_text + "\n"
-            except Exception as e:
-                # If a page fails, skip it but keep going
+            except Exception:
                 continue
-                
-            # Update progress bar (visual feedback for large files)
-            progress = (i + 1) / num_pages
-            progress_bar.progress(progress)
             
-    progress_bar.empty() # Remove bar when done
+            # Visual progress for reading
+            # We normalize progress across all files roughly
+            current_progress = (i + 1) / num_pages
+            progress_bar.progress(current_progress, text=f"Reading page {i+1} of {num_pages}...")
+            
+    progress_bar.empty()
     return text, total_pages
 
 def get_text_chunks(text):
-    # Chunk size 1000 is safe for Free Tier limits
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     chunks = text_splitter.split_text(text)
     return chunks
 
+# --- THE FIXED FUNCTION ---
 def get_vector_store(text_chunks):
-    try:
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
-        # Create vector store
-        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-        return vector_store
-    except Exception as e:
-        st.error(f"Error creating knowledge base: {e}")
-        return None
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
+    
+    vector_store = None
+    
+    # Batch Process Setup
+    batch_size = 25  # Process 25 chunks at a time (Safe for free tier)
+    total_chunks = len(text_chunks)
+    progress_bar = st.progress(0, text="Creating Knowledge Base...")
+    
+    for i in range(0, total_chunks, batch_size):
+        # Get the current batch of text
+        batch = text_chunks[i:i + batch_size]
+        
+        try:
+            if vector_store is None:
+                # Create the first part of the store
+                vector_store = FAISS.from_texts(batch, embedding=embeddings)
+            else:
+                # Add subsequent batches to the existing store
+                vector_store.add_texts(batch)
+                
+            # Update Progress Bar
+            progress = min((i + batch_size) / total_chunks, 1.0)
+            progress_bar.progress(progress, text=f"Processing chunk {min(i + batch_size, total_chunks)} of {total_chunks}...")
+            
+            # CRITICAL FIX: Sleep for 1 second to respect Google's Rate Limit
+            time.sleep(1.5) 
+            
+        except Exception as e:
+            st.error(f"Error processing batch {i}: {str(e)}")
+            # If we hit a limit, wait longer (10 seconds) and try to continue
+            time.sleep(10)
+            continue
+            
+    progress_bar.empty()
+    return vector_store
 
 def get_conversational_chain():
     prompt_template = """
@@ -90,7 +117,6 @@ def user_input(user_question):
     st.write(response["output_text"])
 
 def main():
-    # Logo and Header
     if os.path.exists("logo.png"):
         st.image("logo.png", width=300)
     else:
@@ -110,19 +136,18 @@ def main():
             if not pdf_docs:
                 st.error("Please upload a file first.")
             else:
-                with st.spinner("Reading & Processing... This may take time for large files."):
-                    # Get text and page count
+                with st.spinner("Processing... Do not close this tab."):
                     raw_text, page_count = get_pdf_text(pdf_docs)
                     
                     if len(raw_text) < 100:
-                        st.error("Could not extract text. Is this a scanned image PDF? (OCR not supported in free version)")
+                        st.error("Could not extract text. Is this a scanned image PDF?")
                     else:
-                        st.info(f"Successfully extracted text from {page_count} pages.")
+                        st.info(f"Read {page_count} pages. Now creating AI knowledge base...")
                         text_chunks = get_text_chunks(raw_text)
                         
-                        # Process chunks
+                        # Process chunks with rate limiting
                         st.session_state.vector_store = get_vector_store(text_chunks)
-                        st.success("Done! You can now chat.")
+                        st.success("Done! Knowledge base created.")
 
     user_question = st.text_input("Ask a Question from the PDF Files")
 
