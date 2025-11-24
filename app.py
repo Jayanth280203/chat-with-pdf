@@ -10,7 +10,11 @@ from langchain.prompts import PromptTemplate
 import os
 
 # 1. Configuration
-st.set_page_config(page_title="Free ChatPDF", layout="wide")
+st.set_page_config(
+    page_title="chat-with-pdf",
+    page_icon="logo.png",  # This puts your logo in the browser tab!
+    layout="wide"
+)
 
 # 2. Load API Key securely from Streamlit Secrets
 # This allows the app to use YOUR key without users seeing it.
@@ -67,7 +71,10 @@ def user_input(user_question):
     st.write(response["output_text"])
 
 def main():
-    st.title("📄 Chat with PDF (Public Version)")
+    # Display the logo. 'width' adjusts the size (try 200, 300, or 400)
+    st.image("logo.png", width=300) 
+    
+    st.header("AI-Powered Document Conversations") # Your tagline
     st.markdown("Upload a PDF and ask questions. No API key required!")
 
     # Initialize session state
