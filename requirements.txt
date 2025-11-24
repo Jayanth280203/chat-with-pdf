@@ -4,4 +4,5 @@ langchain-google-genai
 langchain
 langchain-community
 faiss-cpu
-pypdf
+PyPDF2
+python-dotenv
