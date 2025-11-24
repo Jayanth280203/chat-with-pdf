@@ -50,7 +50,7 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    # UPDATED MODEL: "text-embedding-004" is the new standard for free tier
+    # Embedding Model: text-embedding-004 is stable
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=api_key)
     
     vector_store = None
@@ -74,7 +74,7 @@ def get_vector_store(text_chunks):
             
         except Exception as e:
             st.error(f"Error processing batch: {str(e)}")
-            time.sleep(5) # Wait longer if error occurs
+            time.sleep(5)
             continue
             
     progress_bar.empty()
@@ -90,13 +90,13 @@ def get_conversational_chain():
 
     Answer:
     """
-    # FIX: Use the exact stable model name 'gemini-1.5-flash'
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3, google_api_key=api_key)
+    # FIX: Switched to 'gemini-2.0-flash' which is the active model
+    model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, google_api_key=api_key)
     
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain
-    
+
 def user_input(user_question):
     if st.session_state.vector_store is None:
         st.warning("Please upload and process a PDF first!")
@@ -116,7 +116,7 @@ def main():
         st.title("📄 chat-with-pdf")
         
     st.markdown("### AI-Powered Document Conversations")
-    st.markdown("Upload a PDF (even 1000+ pages!) and ask questions.")
+    st.markdown("Upload a PDF and ask questions using **Gemini 2.0**.")
 
     if "vector_store" not in st.session_state:
         st.session_state.vector_store = None
