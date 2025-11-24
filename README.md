@@ -1,4 +1,4 @@
-#  Chat-With-PDF using Gemini 2.0 Flash
+#  Chat-With-PDF *using Gemini 2.0 Flash*
 
 <img src="logo.png" alt="App Logo" width="200"/>
 
