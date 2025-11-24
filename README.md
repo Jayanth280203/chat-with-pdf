@@ -11,7 +11,7 @@ Try it here (Free to use):
 
 ## ✨ Features
 
-✔ Upload & analyze any PDF (notes, research papers, books, reports)
+✔ Upload & analyze any PDF (notes, books)
 
 ✔ Chat naturally with your document
 
