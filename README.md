@@ -51,7 +51,7 @@ Try it here (Free to use):
 
 1️⃣ Clone the Repository
 
-git clone https://github.com/yourusername/chat-with-pdf.git
+git clone https://github.com/Jayanth280203/chat-with-pdf.git
 
 cd chat-with-pdf
 
