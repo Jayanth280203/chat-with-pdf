@@ -90,13 +90,13 @@ def get_conversational_chain():
 
     Answer:
     """
-    # FIX: Using 'gemini-1.5-flash-latest' which is safer, or 'gemini-pro' as backup
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.3, google_api_key=api_key)
+    # FIX: Use the exact stable model name 'gemini-1.5-flash'
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3, google_api_key=api_key)
     
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
     return chain
-
+    
 def user_input(user_question):
     if st.session_state.vector_store is None:
         st.warning("Please upload and process a PDF first!")
