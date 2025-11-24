@@ -117,7 +117,8 @@ def main():
         
     st.markdown("### AI-Powered Document Conversations")
     st.markdown("Upload a PDF and ask questions using **Gemini 2.0**.
-    \n Steps: Upload -> Submit and Process -> Ask proper questions with correct frame of words in the PDF")
+    \n Steps: Upload -> Submit and Process -> Ask proper questions with correct frame of words in the PDF
+    \n Example: Define... Explain...")
 
     if "vector_store" not in st.session_state:
         st.session_state.vector_store = None
