@@ -8,7 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 import os
-import time  # NEW: Needed for the "sleep" pause
+import time
 
 st.set_page_config(page_title="chat-with-pdf", page_icon="logo.png", layout="wide")
 
@@ -37,8 +37,7 @@ def get_pdf_text(pdf_docs):
             except Exception:
                 continue
             
-            # Visual progress for reading
-            # We normalize progress across all files roughly
+            # Update progress
             current_progress = (i + 1) / num_pages
             progress_bar.progress(current_progress, text=f"Reading page {i+1} of {num_pages}...")
             
@@ -50,40 +49,32 @@ def get_text_chunks(text):
     chunks = text_splitter.split_text(text)
     return chunks
 
-# --- THE FIXED FUNCTION ---
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
+    # UPDATED MODEL: "text-embedding-004" is the new standard for free tier
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004", google_api_key=api_key)
     
     vector_store = None
-    
-    # Batch Process Setup
-    batch_size = 25  # Process 25 chunks at a time (Safe for free tier)
+    batch_size = 25 
     total_chunks = len(text_chunks)
     progress_bar = st.progress(0, text="Creating Knowledge Base...")
     
     for i in range(0, total_chunks, batch_size):
-        # Get the current batch of text
         batch = text_chunks[i:i + batch_size]
-        
         try:
             if vector_store is None:
-                # Create the first part of the store
                 vector_store = FAISS.from_texts(batch, embedding=embeddings)
             else:
-                # Add subsequent batches to the existing store
                 vector_store.add_texts(batch)
                 
-            # Update Progress Bar
             progress = min((i + batch_size) / total_chunks, 1.0)
             progress_bar.progress(progress, text=f"Processing chunk {min(i + batch_size, total_chunks)} of {total_chunks}...")
             
-            # CRITICAL FIX: Sleep for 1 second to respect Google's Rate Limit
-            time.sleep(1.5) 
+            # Sleep to prevent hitting rate limits
+            time.sleep(1) 
             
         except Exception as e:
-            st.error(f"Error processing batch {i}: {str(e)}")
-            # If we hit a limit, wait longer (10 seconds) and try to continue
-            time.sleep(10)
+            st.error(f"Error processing batch: {str(e)}")
+            time.sleep(5) # Wait longer if error occurs
             continue
             
     progress_bar.empty()
@@ -144,10 +135,10 @@ def main():
                     else:
                         st.info(f"Read {page_count} pages. Now creating AI knowledge base...")
                         text_chunks = get_text_chunks(raw_text)
-                        
-                        # Process chunks with rate limiting
                         st.session_state.vector_store = get_vector_store(text_chunks)
-                        st.success("Done! Knowledge base created.")
+                        
+                        if st.session_state.vector_store:
+                            st.success("Done! Knowledge base created.")
 
     user_question = st.text_input("Ask a Question from the PDF Files")
 
