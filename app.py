@@ -49,8 +49,8 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    # Embedding Model: embedding-001 is stable
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
+    # Embedding Model: gemini-embedding-001 is stable
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=api_key)
     
     vector_store = None
     batch_size = 25 
