@@ -5,8 +5,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains.question_answering import load_qa_chain
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 import os
 import time
 
@@ -94,7 +93,7 @@ def get_conversational_chain():
     model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3, google_api_key=api_key)
     
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
+    chain = prompt | model
     return chain
 
 def user_input(user_question):
@@ -105,9 +104,11 @@ def user_input(user_question):
     docs = st.session_state.vector_store.similarity_search(user_question)
     chain = get_conversational_chain()
     
-    response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+    context = "\n\n".join([doc.page_content for doc in docs])
+    response = chain.invoke({"context": context, "question": user_question})
+    
     st.write("🤖 **Answer:**")
-    st.write(response["output_text"])
+    st.write(response.content)
 
 def main():
     if os.path.exists("logo.png"):
